@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Text Extractor</title>
+    <link rel="manifest" href="/static/manifest.json">
+
+    <!-- Theme colors -->
+    <meta name="theme-color" content="#FFD700">
+
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121212; /* Matte Black */
+            color: #FFD700;      /* Gold */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: #1e1e1e; /* Dark Grey */
+            padding: 25px 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 10px 25px rgba(255, 215, 0, 0.15);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background: #121212;
+            color: #FFD700;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        #textOutput {
+            width: 100%;
+            height: 300px;
+            padding: 12px;
+            margin-top: 10px;
+            background: #121212;
+            border: 1px solid #333;
+            color: #FFD700;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border-radius: 8px;
+        }
+
+        #copyBtn {
+            display: none;
+            width: 100%;
+            margin-top: 15px;
+            padding: 14px;
+            background: linear-gradient(135deg, #FFD700, #B8860B);
+            color: #121212;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s ease;
+        }
+
+        #copyBtn:hover {
+            background: linear-gradient(135deg, #FFCC00, #A0522D);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>PDF Text Extractor</h2>
+
+    <input type="file" id="pdfFile" accept="application/pdf">
+
+    <div id="textOutput"></div>
+
+    <button id="copyBtn">Copy Text to Clipboard</button>
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+
+<script>
+    const pdfFileInput = document.getElementById("pdfFile");
+    const textOutput = document.getElementById("textOutput");
+    const copyBtn = document.getElementById("copyBtn");
+
+    pdfFileInput.addEventListener("change", async function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function () {
+            const typedarray = new Uint8Array(this.result);
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+
+            let fullText = "";
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(" ");
+                fullText += pageText + "\n\n";
+            }
+
+            textOutput.textContent = fullText;
+            copyBtn.style.display = "block";
+        };
+
+        reader.readAsArrayBuffer(file);
+    });
+
+    copyBtn.addEventListener("click", function () {
+        const text = textOutput.textContent;
+
+        navigator.clipboard.writeText(text).then(() => {
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => copyBtn.textContent = "Copy Text to Clipboard", 1500);
+        });
+    });
+    if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('Service Worker registered successfully.'))
+    .catch(err => console.error('Service Worker registration failed:', err));
+}
+
+</script>
+
+
+</body>
+</html>

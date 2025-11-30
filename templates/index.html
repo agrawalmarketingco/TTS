@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-To-Speech</title>
+    <link rel="manifest" href="/static/manifest.json">
+
+    <!-- Theme colors -->
+    <meta name="theme-color" content="#FFD700">
+
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #121212; /* Matte Black */
+            color: #FFD700;      /* Gold */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 15px;
+        }
+
+        h1 {
+            font-size: 2.3rem;
+            margin-bottom: 25px;
+            color: #FFD700;
+            text-align: center;
+        }
+
+        .card {
+            background: #1e1e1e; /* Dark Grey */
+            border-radius: 12px;
+            padding: 25px 20px;
+            box-shadow: 0 10px 25px rgba(255, 215, 0, 0.15);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .card select,
+        .card textarea {
+            width: 100%;
+            padding: 12px;
+            background: #121212;
+            color: #FFD700;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .card textarea {
+            resize: none;
+            height: 150px;
+        }
+
+        .card button,
+        .nav button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #FFD700, #B8860B);
+            color: #121212;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+
+        .card button:hover,
+        .nav button:hover {
+            background: linear-gradient(135deg, #FFCC00, #A0522D);
+        }
+
+        .nav {
+            margin-top: 20px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .output-file {
+            max-width: 500px;
+            width: 100%;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .output-file audio {
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 10px;
+            display: none;
+            background: #1e1e1e;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.1);
+        }
+
+        .output-file button {
+            background: linear-gradient(135deg, #FFD700, #B8860B);
+            color: #121212;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .output-file button:hover {
+            background: linear-gradient(135deg, #FFCC00, #A0522D);
+        }
+
+        .output-file a {
+            color: #121212;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Text-To-Speech Converter</h1>
+
+    <main>
+        <div class="card">
+            <form id="tts-form" action="#" method="POST">
+                <textarea name="text" id="js-text"></textarea>
+
+                <select name="voice" id="js-voices">
+                    <option value="en-IN-PrabhatNeural">en-IN-PrabhatNeural</option>
+                    <option value="en-IN-NeerjaNeural">en-IN-NeerjaNeural</option>
+                    <option value="en-IN-NeerjaExpressiveNeural">en-IN-NeerjaExpressiveNeural</option>
+                </select>
+
+                <button type="submit" id="js-submit">Convert</button>
+            </form>
+        </div>
+
+        <div class="nav">
+            <a href="/extract"><button>Extract Text From PDF</button></a>
+        </div>
+
+        <div class="output-file">
+            <audio id="audio-player" controls autoplay></audio>
+
+            <button id="download-button">
+                <a id="download-link" href="" download="output.mp3">Download</a>
+            </button>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('tts-form');
+            const submitButton = document.getElementById('js-submit');
+            const audioElement = document.getElementById('audio-player');
+            const downloadButton = document.getElementById('download-button');
+            const downloadLink = document.getElementById('download-link');
+
+            audioElement.style.display = "none";
+            downloadButton.style.display = "none";
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                const formData = new FormData(form);
+
+                submitButton.disabled = true;
+                submitButton.textContent = 'Converting...';
+
+                fetch('/conversion', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.blob())
+                    .then(audioBlob => {
+                        const audioUrl = URL.createObjectURL(audioBlob);
+
+                        audioElement.src = audioUrl;
+                        audioElement.style.display = 'block';
+
+                        downloadLink.href = audioUrl;
+                        downloadButton.style.display = 'inline-block';
+                    })
+                    .catch(error => {
+                        alert('Error: ' + error.message);
+                    })
+                    .finally(() => {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Convert';
+                    });
+            });
+        });
+        if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('Service Worker registered successfully.'))
+    .catch(err => console.error('Service Worker registration failed:', err));
+}
+
+    </script>
+
+</body>
+</html>
